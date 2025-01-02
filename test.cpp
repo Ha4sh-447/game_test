@@ -1,59 +1,85 @@
 #include <raylib.h>
 
-int main(void) {
-  // Initialize player position
-  int playerX = 400;
-  int playerY = 400;
+void jump(Vector2 *pos) {
+  // TODO: make proper updation logic using for loop and acceleration
+}
 
-  // Initialize the window BEFORE loading textures
-  InitWindow(800, 800, "PLAYYYA");
+int main(void) {
+  int posX = 400;
+  int posY = 800 - 128;
+
+  InitWindow(800, 800, "PLAYYAYYA");
   SetTargetFPS(60);
 
-  // Load texture AFTER initializing the window
+  Color color = {(unsigned char)GetRandomValue(0, 255),
+                 (unsigned char)GetRandomValue(0, 255),
+                 (unsigned char)GetRandomValue(0, 255), 255};
+
   Texture2D scarfy = LoadTexture("./resources/scarfy.png");
 
-  // Check if the texture loaded successfully
   if (scarfy.id == 0) {
     TraceLog(LOG_ERROR, "Failed to load texture scarfy.png");
     CloseWindow();
     return -1;
   }
 
-  // Generate a random color
-  Color color = {(unsigned char)GetRandomValue(0, 255),
-                 (unsigned char)GetRandomValue(0, 255),
-                 (unsigned char)GetRandomValue(0, 255), 255};
+  unsigned frameCount = 6;
+  int numFrames = 6;
+  int frameWidth = scarfy.width / numFrames;
+  int frameHeight = scarfy.height;
 
-  // Main game loop
+  int currFrame = 0;         // Current frame index
+  int frameDelay = 5;        // After 5 iterations change the frame
+  int frameDelayCounter = 0; // A counter to check if 5 iterations have passed
+                             // so that frame can be updated
+
+  Rectangle frameRec = {0.0f, 0.0f, (float)frameWidth, (float)frameHeight};
+  Vector2 scarfyPos = {(float)posX, (float)posY};
+
+  bool isFacingRight = true;
+
   while (!WindowShouldClose()) {
-    // Event handling
-    if (IsKeyDown(KEY_RIGHT))
-      playerX += 3;
-    if (IsKeyDown(KEY_LEFT))
-      playerX -= 3;
-    if (IsKeyDown(KEY_UP))
-      playerY -= 3;
-    if (IsKeyDown(KEY_DOWN))
-      playerY += 3;
+    // Frame updation
+    ++frameDelayCounter; // update counter
+    if (frameDelayCounter > frameDelay) {
+      frameDelayCounter = 0;  // reset the counter
+      ++currFrame;            // move to next fram
+      currFrame %= numFrames; // Wrap to 0
+      frameRec.x = (float)frameWidth *
+                   currFrame; // update the x coordinate of the sprite sheet
+    }
 
-    // Drawing
+    // Update position
+    if (IsKeyDown(KEY_DOWN) && (scarfyPos.y + 128 < 800)) {
+      scarfyPos.y += 3;
+    }
+    if (IsKeyDown(KEY_UP) && (scarfyPos.y > 0)) {
+      scarfyPos.y -= 3;
+    }
+    if (IsKeyDown(KEY_LEFT) && (scarfyPos.x > 0)) {
+      scarfyPos.x -= 3;
+      isFacingRight = false;
+    }
+    if (IsKeyDown(KEY_RIGHT) && (scarfyPos.x + 128 < 800)) {
+      scarfyPos.x += 3;
+      isFacingRight = true;
+    }
+    if (IsKeyDown(KEY_SPACE)) {
+      jump(&scarfyPos);
+    }
+
+    frameRec.width = isFacingRight ? (float)frameWidth : -(float)frameWidth;
+    // Draw on screen
     BeginDrawing();
     ClearBackground(GREEN);
 
-    // Draw the loaded texture
-    // Check whether it works the same with DrawTexture()
-    // DrawTextureEx(scarfy, (Vector2){0, 0}, 0.0f, 1.0f, WHITE);
-    DrawTexture(scarfy, 15, 40, WHITE);
-
-    // Draw the rectangle
-    DrawRectangle(playerX - 50, playerY - 50, 50, 50, color);
-
+    DrawTextureRec(
+        scarfy, frameRec, scarfyPos,
+        WHITE); // to move the char we would need to update scarfyPos vector
     EndDrawing();
   }
 
-  // Unload texture and close window
   UnloadTexture(scarfy);
   CloseWindow();
-
   return 0;
 }

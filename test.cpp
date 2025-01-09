@@ -1,61 +1,102 @@
-#include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <raylib.h>
+#include <raymath.h>
 
-#define MAX_JUMP_HEIGHT 400.0f
+const int gravity = 1;
 
-struct Velocity {
-  float Vx;
-  float Vy;
-};
+const int screenWidth = 1600;
+const int screenHeight = 900;
 
-void jump(Vector2 *pos, Velocity *velo) {
-  // TODO: make proper updation logic using for loop and acceleration
-  int h = 0;
-  float currPos = pos->y;
-  for (h = 0; h <= (int)MAX_JUMP_HEIGHT; h += 10) {
-    if (h < (int)MAX_JUMP_HEIGHT) {
-      pos->y -= MAX_JUMP_HEIGHT / 20;
-    } else {
-      pos->y += MAX_JUMP_HEIGHT / 25;
+const int numFrames = 6;
+
+const int scarfySpeed = 10;
+const int groundYPos = (3 * screenHeight) / 4; // Define ground position
+
+const int jumpUpFrame = 3;
+const int jumpDownFrame = 4;
+const int footstepFrame1 = 1; // Frame showing footsteps
+const int footstepFrame2 = 4; // Frame showing footstepsj
+
+int airTime = 85;
+
+bool isFootstepFrame(int frameIndex) {
+  if (frameIndex == footstepFrame1 || frameIndex == footstepFrame2) {
+    return true;
+  }
+  return false;
+}
+
+bool isScarfyOnGround(Texture2D *scarfy, Vector2 *pos) {
+  if (pos->y + scarfy->height >= groundYPos) {
+    return true;
+  }
+  return false;
+}
+
+void animateChar(Rectangle *frameRec, Vector2 *scarfyVel, int frameDelay,
+                 int numFrame, int *currFrame, int *frameDelayCounter,
+                 bool scarfyMoving, bool scarfyIsOnGround, Sound sound) {
+
+  float frameWidth = frameRec->width;
+  ++(*frameDelayCounter);
+  if ((*frameDelayCounter) > frameDelay) {
+    *frameDelayCounter = 0;
+    if (scarfyMoving) {
+      if (scarfyIsOnGround) {
+        ++(*currFrame);
+        *currFrame %= numFrame;
+        if (isFootstepFrame(*currFrame)) {
+          // play footstep sound
+          PlaySound(sound);
+        }
+      } else {
+        if (scarfyVel->y < 0) {
+          *currFrame = jumpUpFrame;
+        } else {
+          *currFrame = jumpDownFrame;
+        }
+      }
+      frameRec->x = (float)frameWidth * (*currFrame);
     }
   }
 }
 
-void animateChar(Rectangle *frameRec, int frameDelay, int numFrame,
-                 int *currFrame, int *frameDelayCounter) {
-  float frameWdith = frameRec->width;
-  ++(*frameDelayCounter);
-  if (*frameDelayCounter > frameDelay) {
-    (*currFrame)++;
-    *frameDelayCounter = 0;
-    *currFrame %= numFrame;
-    frameRec->x = frameWdith * (*currFrame);
+void keepWithinBounds(Vector2 *pos, Texture2D *tex, bool isInAir) {
+  if (pos->x < 0) {
+    pos->x = 0;
+  }
+  if (pos->x + (int)(tex->width / numFrames) > screenWidth) {
+    pos->x = screenWidth - (int)(tex->width / numFrames);
+  }
+
+  if (isInAir && pos->y < 0) {
+    pos->y = 10;
   }
 }
 
-float getCurrentTime() {
-  auto now = std::chrono::high_resolution_clock::now();
-  auto timeSinceEpochs = now.time_since_epoch();
-
-  return std::chrono::duration<float>(timeSinceEpochs).count();
-}
+void displayText(char *text) {
+  BeginDrawing();
+  DrawText(text, 20, 20, 20, BLACK);
+  EndDrawing();
+};
 
 int main(void) {
-  int posX = 400;
-  int posY = 800 - 128;
 
-  // Character initially at halt
-  Velocity scarfyVel = {0, 0};
-  Vector2 gravity = {0, 2};
-
-  InitWindow(800, 800, "PLAYYAYYA");
+  Vector2 scarfyVel = {0.0f, 0.0f};
+  bool isInAir = false;
+  InitWindow(screenWidth, screenHeight, "PLAYYAYYA");
   SetTargetFPS(60);
 
-  Color color = {(unsigned char)GetRandomValue(0, 255),
-                 (unsigned char)GetRandomValue(0, 255),
-                 (unsigned char)GetRandomValue(0, 255), 255};
+  InitAudioDevice();
 
   Texture2D scarfy = LoadTexture("./resources/scarfy.png");
+
+  const char *filename =
+      "./resources/audio/"
+      "Single-footstep-in-grass-A-www.fesliyanstudios.com.mp3";
+  Sound footstepSound = LoadSound(filename);
+  char airTimeText[50];
 
   if (scarfy.id == 0) {
     TraceLog(LOG_ERROR, "Failed to load texture scarfy.png");
@@ -64,7 +105,6 @@ int main(void) {
   }
 
   unsigned frameCount = 6;
-  int numFrames = 6;
   int frameWidth = scarfy.width / numFrames;
   int frameHeight = scarfy.height;
 
@@ -74,80 +114,64 @@ int main(void) {
                              // so that frame can be updated
 
   Rectangle frameRec = {0.0f, 0.0f, (float)frameWidth, (float)frameHeight};
-  Vector2 scarfyPos = {(float)posX, (float)posY};
+  Vector2 scarfyPos = {screenWidth / 2.0f, (float)groundYPos - scarfy.height};
 
   bool isFacingRight = true;
-
-  float prevTime = 0;
-  float currTime = getCurrentTime();
-
   while (!WindowShouldClose()) {
-    // Update position
-    if (IsKeyDown(KEY_RIGHT)) {
-      scarfyVel.Vx = 3; // Move right
-      animateChar(&frameRec, frameDelay, numFrames, &currFrame,
-                  &frameDelayCounter);
-      isFacingRight = true;
-    } else if (IsKeyDown(KEY_LEFT)) {
-      scarfyVel.Vx = -3; // Move left
-      animateChar(&frameRec, frameDelay, numFrames, &currFrame,
-                  &frameDelayCounter);
-      isFacingRight = false;
-    } else {
-      scarfyVel.Vx = 0; // Stop horizontal movement when no key is pressed
-    }
-
-    if (IsKeyDown(KEY_UP)) {
-      Vector2 currPos = scarfyPos;
-
-      while (scarfyPos.y != 0) {
-        prevTime = currTime;
-        currTime = getCurrentTime();
-
-        float dt = currTime - prevTime;
-        if (dt > 0.15f)
-          dt = 0.15f;
-
-        scarfyPos.y += scarfyVel.Vy * dt;
-        scarfyPos.x += scarfyVel.Vx * dt;
-
-        scarfyVel.Vy += gravity.y * dt;
+    // Horizontal movement of scarfy
+    if (isScarfyOnGround(&scarfy, &scarfyPos)) {
+      if (IsKeyDown(KEY_SPACE)) {
+        scarfyVel.y = -2 * scarfySpeed;
       }
 
-      animateChar(&frameRec, frameDelay, numFrames, &currFrame,
-                  &frameDelayCounter);
-
-    } else if (IsKeyDown(KEY_DOWN)) {
-      scarfyVel.Vy = 3; // Move down
-      animateChar(&frameRec, frameDelay, numFrames, &currFrame,
-                  &frameDelayCounter);
-
-    } else {
-      scarfyVel.Vy = 0; // Stop vertical movement when no key is pressed
+      if (IsKeyDown(KEY_RIGHT)) {
+        scarfyVel.x = 3;
+        isFacingRight = true;
+      } else if (IsKeyDown(KEY_LEFT)) {
+        scarfyVel.x = -3;
+        isFacingRight = false;
+      } else {
+        scarfyVel.x = 0;
+      }
     }
 
-    frameRec.width = isFacingRight ? frameRec.width : -frameRec.width;
+    bool scarfyMoving = scarfyVel.x != 0.0f || scarfyVel.y != 0.0f;
 
-    scarfyPos.x += scarfyVel.Vx;
-    scarfyPos.y += scarfyVel.Vy;
+    bool wasScarfyOnGround = isScarfyOnGround(&scarfy, &scarfyPos);
+    scarfyPos = Vector2Add(scarfyPos, scarfyVel);
+    bool scarfyIsOnGround = isScarfyOnGround(&scarfy, &scarfyPos);
+    sprintf(airTimeText, "Air time left: %d", airTime);
+    DrawText(airTimeText, 20, 20, 50, BLACK);
 
-    if (scarfyPos.x + 128 > 800)
-      scarfyPos.x = 800 - 128;
-    if (scarfyPos.x < 0)
-      scarfyPos.x = 0;
-    if (scarfyPos.y < 0)
-      scarfyPos.y = 0;
-    if (scarfyPos.y > 800 - 128)
-      scarfyPos.y = 800 - 128;
+    if (scarfyIsOnGround) {
+      scarfyVel.y = 0;
+      scarfyPos.y = groundYPos - scarfy.height;
+      if (!wasScarfyOnGround) {
+        // play landing sound
+        PlaySound(footstepSound);
+      }
+    } else {
+      // TODO: Play sound when in air
+      if (IsKeyDown(KEY_SPACE) && airTime > 0) {
+        airTime -= 2;
+        isInAir = true;
+      } else {
+        scarfyVel.y += gravity;
+        airTime = 85;
+      }
+    }
 
     frameRec.width = isFacingRight ? (float)frameWidth : -(float)frameWidth;
+
+    animateChar(&frameRec, &scarfyVel, frameDelay, numFrames, &currFrame,
+                &frameDelayCounter, scarfyMoving, scarfyIsOnGround,
+                footstepSound);
+    keepWithinBounds(&scarfyPos, &scarfy, isInAir);
     // Draw on screen
     BeginDrawing();
     ClearBackground(GREEN);
 
-    DrawTextureRec(
-        scarfy, frameRec, scarfyPos,
-        WHITE); // to move the char we would need to update scarfyPos vector
+    DrawTextureRec(scarfy, frameRec, scarfyPos, WHITE);
     EndDrawing();
   }
 

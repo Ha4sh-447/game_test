@@ -12,6 +12,7 @@ extern int screenWidth;
 extern int screenHeight;
 extern int playerSpeed;
 extern float groundYPos;
+extern int gravity;
 
 class AnimatedSprite {
 public:

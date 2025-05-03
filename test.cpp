@@ -81,6 +81,15 @@ void displayText(char *text) {
   EndDrawing();
 };
 
+void updateAirTime(int *airTime) {
+  if (*airTime <= 1) {
+    *airTime = 1;
+    for (int i = 1; *airTime <= 85; i *= 2) {
+      *airTime += 1 * i;
+    }
+  }
+};
+
 int main(void) {
 
   Vector2 scarfyVel = {0.0f, 0.0f};
@@ -155,10 +164,18 @@ int main(void) {
       if (IsKeyDown(KEY_SPACE) && airTime > 0) {
         airTime -= 2;
         isInAir = true;
-      } else {
-        scarfyVel.y += gravity;
-        airTime = 85;
       }
+      /*else {
+        scarfyVel.y += gravity;
+        // airTime = 85;
+        updateAirTime(&airTime);
+        isInAir = false;
+      }
+      */
+      scarfyVel.y += gravity;
+      // airTime = 85;
+      updateAirTime(&airTime);
+      isInAir = false;
     }
 
     frameRec.width = isFacingRight ? (float)frameWidth : -(float)frameWidth;

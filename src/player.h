@@ -1,24 +1,24 @@
+#pragma once
+
 #include <raylib.h>
 
+extern const int screenWidth;
+extern const int screenHeight;
+extern const int playerSpeed;
+extern const float groundYPos;
+extern const int gravity;
+
 typedef struct Sprite {
-  int x;
-  int y;
-  int height;
-  int width;
+  Vector2 position;
   Texture2D tex;
 } Sprite;
-
-extern int screenWidth;
-extern int screenHeight;
-extern int playerSpeed;
-extern float groundYPos;
-extern int gravity;
 
 class AnimatedSprite {
 public:
   float frameWidth = 0.0f;
   float frameHeight = 0.0f;
-  int numframes = 0;
+  int numFrames = 0;
+  int currFrame = 0;
   float timer = 0;
   int frameIndex = 0;
   int frameDelay = 0;
@@ -28,31 +28,29 @@ public:
   int footstepFrame2 = 0;
   Sprite sprite;
 
-  void loadSprite(char *sheet);
-  void animateFrame();
+  void LoadSprite(const char *texturePath, int frame);
+  void AnimateFrame(Vector2 velocity, bool moving, bool onGround,
+                    Sound footstepSound);
   bool isFootstepFrame();
 };
 
-class Player : AnimatedSprite {
-  int health;
-  int airtime;
-  int direction;
-  Vector2 speed = {0};
-  Vector2 pos = {0};
-  bool moving;
-  bool jumping;
+class Player {
+  AnimatedSprite sprite;
+  Vector2 position;
+  Vector2 velocity;
+  int airTime = 85;
+  int facingRight = true;
+  int isInAir = false;
 
 public:
+  Sound footStepSound;
+  Sound jumpSound;
+
   Player(Vector2 startPos);
-  void handleControl();
-  void keepWithinBounds();
-  bool isPlayerOnGround();
-  void update();
-  void draw();
-};
 
-class Game {
-public:
-  void draw();
-  void update(Player *player);
+  void HandleControls();
+  void KeepWithinBounds();
+  bool IsPlayerOnGround();
+  void Update();
+  void Draw();
 };

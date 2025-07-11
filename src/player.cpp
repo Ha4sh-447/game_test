@@ -15,12 +15,12 @@ Player::Player(Vector2 startPos) {
   jumping = false;
 }
 
-void AnimatedSprite::loadSprite(char *sheet) {
+void AnimatedSprite::LoadSprite(const char *texturePath, int frame) {
   /*
    * Load the sprite into a Sprite object
    */
-  Texture2D tex = LoadTexture(sheet);
-  numframes = 6;
+  Texture2D tex = LoadTexture(texturePath);
+  numframes = frame;
   Sprite sp = {100, -(int)(3 * groundYPos) / 4, tex.height,
                tex.width / numframes, tex};
   sprite = sp;

@@ -1,91 +1,89 @@
 #include "player.h"
-#include "raylib.h"
-#include <cstdio>
+#include "config.h"
+#include <raylib.h>
 #include <raymath.h>
-
-int gravity = 1;
+#include <stdio.h>
 
 Player::Player(Vector2 startPos) {
-  health = 100;
-  airtime = 70;
-  pos = startPos;
-  speed.x = playerSpeed;
-  speed.y = 0;
-  moving = false;
-  jumping = false;
+  position = startPos;
+  velocity = {0, 0};
+  airTime = 85;
+  facingRight = true;
+  isInAir = false;
+
+  sprite.LoadSprite(CHAR_TEXTURE_PATH, 6, {1, 4, 4, 5});
+  jumpSound = LoadSound(JUMP_SOUND_PATH);
 }
 
-void AnimatedSprite::LoadSprite(const char *texturePath, int frame) {
-  /*
-   * Load the sprite into a Sprite object
-   */
-  Texture2D tex = LoadTexture(texturePath);
-  numframes = frame;
-  Sprite sp = {100, -(int)(3 * groundYPos) / 4, tex.height,
-               tex.width / numframes, tex};
-  sprite = sp;
-}
-
-bool Player::isPlayerOnGround() {
-  // Check if Player is on ground
-  if (pos.y + sprite.height == groundYPos) {
-    return true;
-  }
-  return false;
-}
-
-void Player::handleControl() {
-  // Handle key inputs
-  if (isPlayerOnGround()) {
-    if (IsKeyDown(KEY_SPACE)) {
-      speed.y = -2 * playerSpeed;
-    }
-
+void Player::HandleControls() {
+  if (IsPlayerOnGround()) {
     if (IsKeyDown(KEY_RIGHT)) {
-      speed.x = 3;
-      direction = 1;
+      velocity.x = 3;
+      facingRight = true;
     } else if (IsKeyDown(KEY_LEFT)) {
-      speed.x = -3;
-      direction = 0;
+      velocity.x = -3;
+      facingRight = false;
     } else {
-      speed.x = 0;
+      velocity.x = 0;
     }
-  }
 
-  moving = speed.x != 0.0f || speed.y != 0.0f;
-}
-
-void Player::update() {
-  // update speed of the player
-  bool wasScarfyOnGround = isPlayerOnGround();
-  pos = Vector2Add(pos, speed);
-  bool scarfyIsOnGround = isPlayerOnGround();
-  // Jumping stuff
-  if (scarfyIsOnGround) {
-    speed.y = 0;
-    pos.y = groundYPos - sprite.height;
-    if (!wasScarfyOnGround) {
-      // play sound
+    if (IsKeyPressed(KEY_SPACE)) {
+      velocity.y = -15.0f;
+      isInAir = true;
+      PlaySound(jumpSound);
     }
   } else {
-    if (IsKeyDown(KEY_SPACE) && airtime > 0) {
-      airtime -= 2;
-    } else {
-      speed.y += gravity;
-      // airtime = 85;
+    if (IsKeyDown(KEY_SPACE) && airTime > 0) {
+      velocity.y = -15.0f;
+      airTime -= 2;
     }
   }
-
-  frameRec.width = direction ? frameWidth : -frameWidth;
-  Vector2Add(pos, speed);
-  draw();
 }
 
-void Player::draw() {
+void Player::Update() {
+  bool wasOnGround = IsPlayerOnGround();
+  position = Vector2Add(position, velocity);
 
+  if (IsPlayerOnGround()) {
+    velocity.y = 0;
+    position.y = groundYPos - sprite.frameHeight;
+    isInAir = false;
+
+    if (airTime < 85)
+      airTime++;
+  } else {
+    isInAir = true;
+    velocity.y -= gravity;
+  }
+
+  sprite.frameRec.width = facingRight ? sprite.frameWidth : -sprite.frameWidth;
+  bool isMoving = velocity.x != 0 || !IsPlayerOnGround();
+  sprite.AnimateFrame(velocity, isMoving, IsPlayerOnGround());
+
+  KeepWithinBounds();
+}
+
+void Player::Draw() {
   char airTimeText[50];
-  sprintf(airTimeText, "Air time left: %d", airtime);
-  DrawText(airTimeText, 20, 20, 50, BLACK);
+  sprintf(airTimeText, "Air Time: %d", airTime);
+  DrawText(airTimeText, 20, 20, 40, BLACK);
+  DrawTextureRec(sprite.tex, sprite.frameRec, position, WHITE);
+}
 
-  DrawTextureRec(sprite.tex, frameRec, pos, WHITE);
+void Player::KeepWithinBounds() {
+  if (position.x < 0)
+    position.x = 0;
+  if (position.x + sprite.frameWidth > screenWidth)
+    position.x = screenWidth - sprite.frameWidth;
+  if (isInAir && position.y < 0)
+    position.y = 10;
+}
+
+bool Player::IsPlayerOnGround() {
+  return position.y + sprite.frameHeight >= groundYPos;
+}
+
+void Player::Unload() {
+  sprite.Unload();
+  UnloadSound(jumpSound);
 }

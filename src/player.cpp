@@ -8,6 +8,8 @@ Player::Player(Vector2 startPos) {
   position = startPos;
   velocity = {0, 0};
   airTime = 85;
+  jumpUpVelocity = 15.0f;
+  airTimeDepletionRate = 2;
   facingRight = true;
   isInAir = false;
 
@@ -28,14 +30,18 @@ void Player::HandleControls() {
     }
 
     if (IsKeyPressed(KEY_SPACE)) {
-      velocity.y = -15.0f;
+      velocity.y = -10.0f;
       isInAir = true;
+      StopSound(jumpSound);
       PlaySound(jumpSound);
     }
   } else {
+    isInAir = true;
     if (IsKeyDown(KEY_SPACE) && airTime > 0) {
-      velocity.y = -15.0f;
-      airTime -= 2;
+      velocity.y = -(jumpUpVelocity);
+      airTime -= airTimeDepletionRate;
+    } else {
+      velocity.y += gravity;
     }
   }
 }
@@ -43,8 +49,9 @@ void Player::HandleControls() {
 void Player::Update() {
   bool wasOnGround = IsPlayerOnGround();
   position = Vector2Add(position, velocity);
+  bool isOnGround = IsPlayerOnGround();
 
-  if (IsPlayerOnGround()) {
+  if (isOnGround) {
     velocity.y = 0;
     position.y = groundYPos - sprite.frameHeight;
     isInAir = false;
@@ -53,19 +60,19 @@ void Player::Update() {
       airTime++;
   } else {
     isInAir = true;
-    velocity.y -= gravity;
+    velocity.y += gravity;
   }
 
   sprite.frameRec.width = facingRight ? sprite.frameWidth : -sprite.frameWidth;
-  bool isMoving = velocity.x != 0 || !IsPlayerOnGround();
-  sprite.AnimateFrame(velocity, isMoving, IsPlayerOnGround());
+  bool isMoving = velocity.x != 0 || !isOnGround;
+  sprite.AnimateFrame(velocity, isMoving, isOnGround);
 
   KeepWithinBounds();
 }
 
 void Player::Draw() {
   char airTimeText[50];
-  sprintf(airTimeText, "Air Time: %d", airTime);
+  snprintf(airTimeText, sizeof(airTimeText), "Air Time: %d", airTime);
   DrawText(airTimeText, 20, 20, 40, BLACK);
   DrawTextureRec(sprite.tex, sprite.frameRec, position, WHITE);
 }

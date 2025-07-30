@@ -9,6 +9,8 @@ public:
   Vector2 velocity;
   AnimatedSprite sprite;
   int airTime;
+  int airTimeDepletionRate;
+  float jumpUpVelocity;
   int facingRight = true;
   int isInAir = false;
 

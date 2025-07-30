@@ -4,7 +4,7 @@
 
 void AnimatedSprite::LoadSprite(const char *texturePath, int frameCount,
                                 const FrameInfo frameinfo) {
-  Texture2D tex = LoadTexture(texturePath);
+  tex = LoadTexture(texturePath);
   numFrames = frameCount;
   frameHeight = (float)tex.height;
   frameWidth = (float)tex.width / numFrames;

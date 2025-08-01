@@ -13,6 +13,7 @@ public:
   float jumpUpVelocity;
   int facingRight = true;
   int isInAir = false;
+  int health = 100;
 
   Sound footStepSound;
   Sound jumpSound;

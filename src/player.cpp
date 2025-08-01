@@ -7,7 +7,7 @@
 Player::Player(Vector2 startPos) {
   position = startPos;
   velocity = {0, 0};
-  airTime = 85;
+  airTime = 125;
   jumpUpVelocity = 15.0f;
   airTimeDepletionRate = 2;
   facingRight = true;
@@ -32,6 +32,7 @@ void Player::HandleControls() {
     if (IsKeyPressed(KEY_SPACE)) {
       velocity.y = -10.0f;
       isInAir = true;
+      health -= 10;
       StopSound(jumpSound);
       PlaySound(jumpSound);
     }
@@ -56,7 +57,7 @@ void Player::Update() {
     position.y = groundYPos - sprite.frameHeight;
     isInAir = false;
 
-    if (airTime < 85)
+    if (airTime < 125)
       airTime++;
   } else {
     isInAir = true;
@@ -72,8 +73,11 @@ void Player::Update() {
 
 void Player::Draw() {
   char airTimeText[50];
+  char playerHealth[50];
   snprintf(airTimeText, sizeof(airTimeText), "Air Time: %d", airTime);
+  snprintf(playerHealth, sizeof(playerHealth), "Health: %d", health);
   DrawText(airTimeText, 20, 20, 40, BLACK);
+  DrawText(playerHealth, 20, 70, 40, BLACK);
   DrawTextureRec(sprite.tex, sprite.frameRec, position, WHITE);
 }
 
